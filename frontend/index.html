@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation Fleet Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <h1>Transportation Fleet Management System</h1>
+    <p>End-to-end control of vehicles, trips, fuel, maintenance, and performance with a clean MVC Spring Boot backend and a responsive HTML/CSS experience.</p>
+</header>
+
+<main>
+    <section class="dashboard-grid" aria-label="Quick navigation">
+        <article class="dashboard-card" data-href="vehicles.html">
+            <h3>Vehicle Management</h3>
+            <p>Add or update fleet records with instant tracking.</p>
+        </article>
+        <article class="dashboard-card" data-href="trips.html">
+            <h3>Trip Scheduling</h3>
+            <p>Plan routes, assign drivers, and monitor schedules.</p>
+        </article>
+        <article class="dashboard-card" data-href="fuel.html">
+            <h3>Fuel Management</h3>
+            <p>Track usage, costs, and optimize refueling.</p>
+        </article>
+        <article class="dashboard-card" data-href="maintenance.html">
+            <h3>Maintenance Tracking</h3>
+            <p>Stay ahead of inspections and service history.</p>
+        </article>
+        <article class="dashboard-card" data-href="performance.html">
+            <h3>Performance Analysis</h3>
+            <p>Generate dashboards and KPI snapshots.</p>
+        </article>
+    </section>
+
+    <section class="status-grid">
+        <article class="status-card">
+            <h3>Vehicles</h3>
+            <span id="vehicle-count">0</span>
+            <small class="module-description">Active fleet records</small>
+        </article>
+        <article class="status-card">
+            <h3>Trips</h3>
+            <span id="trip-count">0</span>
+            <small class="module-description">Scheduled assignments</small>
+        </article>
+        <article class="status-card">
+            <h3>Fuel</h3>
+            <span id="fuel-total">0 L</span>
+            <small class="module-description">Tracked consumption</small>
+        </article>
+        <article class="status-card">
+            <h3>Maintenance</h3>
+            <span id="maintenance-count">0</span>
+            <small class="module-description">Upcoming services</small>
+        </article>
+    </section>
+</main>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const API_BASE = 'http://localhost:8081/api';
+    const notification = document.getElementById('notification');
+
+    function showToast(message, type = 'success') {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => notification.classList.remove('show'), 3200);
+    }
+
+    async function fetchJson(url, options = {}) {
+        const response = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Request failed');
+        }
+        if (response.status === 204) {
+            return null;
+        }
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+        return response.text();
+    }
+
+    async function loadVehicles() {
+        try {
+            const vehicles = await fetchJson(`${API_BASE}/vehicles`);
+            document.getElementById('vehicle-count').textContent = vehicles.length;
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    async function loadTrips() {
+        try {
+            const trips = await fetchJson(`${API_BASE}/trips`);
+            document.getElementById('trip-count').textContent = trips.length;
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    async function loadFuelUsage() {
+        try {
+            const summary = await fetchJson(`${API_BASE}/fuel/usage`);
+            document.getElementById('fuel-total').textContent = `${summary.totalFuelQuantity} L`;
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    async function loadMaintenance() {
+        try {
+            const records = await fetchJson(`${API_BASE}/maintenance`);
+            document.getElementById('maintenance-count').textContent = records.length;
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    async function loadPerformance() {
+        try {
+            const reports = await fetchJson(`${API_BASE}/performance`);
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    document.querySelectorAll('[data-href]').forEach(card => {
+        card.addEventListener('click', () => {
+            window.location.href = card.getAttribute('data-href');
+        });
+    });
+
+    async function bootstrap() {
+        await Promise.all([
+            loadVehicles(),
+            loadTrips(),
+            loadFuelUsage(),
+            loadMaintenance(),
+            loadPerformance()
+        ]);
+    }
+
+    bootstrap();
+</script>
+</body>
+</html>
+

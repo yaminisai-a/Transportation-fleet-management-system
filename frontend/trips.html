@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Scheduling | TFMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <a class="back-link" href="index.html">Back to dashboard</a>
+    <h1>Trip Scheduling</h1>
+    <p>Coordinate origins, destinations, and driver assignments to keep every delivery on time.</p>
+</header>
+
+<main>
+    <section class="status-grid">
+        <article class="status-card">
+            <h3>Total Trips</h3>
+            <span id="trip-count">0</span>
+            <small class="module-description">Scheduled assignments</small>
+        </article>
+    </section>
+
+    <section class="module-card">
+        <div class="module-header">
+            <div>
+                <h2>Trip Planner</h2>
+                <p class="module-description">Create and update trip definitions with timing and driver details.</p>
+            </div>
+            <button type="button" id="refresh-trips">Refresh</button>
+        </div>
+
+        <form id="trip-form">
+            <div>
+                <label for="trip-action">Action</label>
+                <select id="trip-action" name="tripAction" required>
+                    <option value="add">Add Trip</option>
+                    <option value="update">Update Trip</option>
+                </select>
+            </div>
+            <div>
+                <label for="trip-id">Trip ID</label>
+                <input type="number" id="trip-id" name="tripId" placeholder="Required for update">
+            </div>
+            <div>
+                <label for="trip-vehicle-id">Vehicle ID</label>
+                <input type="number" id="trip-vehicle-id" name="vehicleId" required>
+            </div>
+            <div>
+                <label for="driver-id">Driver ID</label>
+                <input type="number" id="driver-id" name="driverId" required>
+            </div>
+            <div>
+                <label for="start-location">Start Location</label>
+                <input type="text" id="start-location" name="startLocation" required>
+            </div>
+            <div>
+                <label for="end-location">End Location</label>
+                <input type="text" id="end-location" name="endLocation" required>
+            </div>
+            <div>
+                <label for="start-time">Start Time</label>
+                <input type="datetime-local" id="start-time" name="startTime" required>
+            </div>
+            <div>
+                <label for="end-time">End Time</label>
+                <input type="datetime-local" id="end-time" name="endTime" required>
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit">Save Trip</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="module-card">
+        <h2>Schedule Board</h2>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Vehicle</th>
+                    <th>Driver</th>
+                    <th>Route</th>
+                    <th>Start</th>
+                    <th>End</th>
+                </tr>
+                </thead>
+                <tbody id="trip-table"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const API_BASE = 'http://localhost:8081/api';
+    const notification = document.getElementById('notification');
+
+    const showToast = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => notification.classList.remove('show'), 3200);
+    };
+
+    const fetchJson = async (url, options = {}) => {
+        const response = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Request failed');
+        }
+        if (response.status === 204) return null;
+        return response.json();
+    };
+
+    const tripForm = document.getElementById('trip-form');
+    tripForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(tripForm);
+        const action = data.get('tripAction');
+        const payload = {
+            vehicleId: Number(data.get('vehicleId')),
+            driverId: Number(data.get('driverId')),
+            startLocation: data.get('startLocation'),
+            endLocation: data.get('endLocation'),
+            startTime: data.get('startTime'),
+            endTime: data.get('endTime')
+        };
+        const tripId = data.get('tripId');
+        try {
+            if (action === 'add') {
+                await fetchJson(`${API_BASE}/trips`, { method: 'POST', body: JSON.stringify(payload) });
+                showToast('Trip created');
+            } else {
+                if (!tripId) throw new Error('Trip ID required for update');
+                await fetchJson(`${API_BASE}/trips/${tripId}`, { method: 'PUT', body: JSON.stringify(payload) });
+                showToast('Trip updated');
+            }
+            tripForm.reset();
+            await loadTrips();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    const loadTrips = async () => {
+        try {
+            const trips = await fetchJson(`${API_BASE}/trips`);
+            document.getElementById('trip-count').textContent = trips.length;
+            const tbody = document.getElementById('trip-table');
+            tbody.innerHTML = trips.map(trip => `
+                <tr>
+                    <td>${trip.tripId}</td>
+                    <td>${trip.vehicle?.vehicleId}</td>
+                    <td>${trip.driverId}</td>
+                    <td>${trip.startLocation} → ${trip.endLocation}</td>
+                    <td>${trip.startTime?.replace('T', ' ')}</td>
+                    <td>${trip.endTime?.replace('T', ' ')}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    document.getElementById('refresh-trips').addEventListener('click', loadTrips);
+
+    loadTrips();
+</script>
+</body>
+</html>
+

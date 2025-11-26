@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Tracking | TFMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <a class="back-link" href="index.html">Back to dashboard</a>
+    <h1>Maintenance Tracking</h1>
+    <p>Stay proactive with service schedules, inspection notes, and completion statuses across the entire fleet.</p>
+</header>
+
+<main>
+    <section class="status-grid">
+        <article class="status-card">
+            <h3>Maintenance Items</h3>
+            <span id="maintenance-count">0</span>
+            <small class="module-description">Open and historical records</small>
+        </article>
+    </section>
+
+    <section class="module-card">
+        <div class="module-header">
+            <div>
+                <h2>Schedule Maintenance</h2>
+                <p class="module-description">Log upcoming work orders or close out completed services.</p>
+            </div>
+            <button type="button" id="refresh-maintenance">Refresh</button>
+        </div>
+
+        <form id="maintenance-form">
+            <div>
+                <label for="maintenance-vehicle-id">Vehicle ID</label>
+                <input type="number" id="maintenance-vehicle-id" name="vehicleId" required>
+            </div>
+            <div>
+                <label for="maintenance-description">Description</label>
+                <input type="text" id="maintenance-description" name="description" required>
+            </div>
+            <div>
+                <label for="maintenance-date">Scheduled Date</label>
+                <input type="date" id="maintenance-date" name="scheduledDate" required>
+            </div>
+            <div>
+                <label for="maintenance-status">Status</label>
+                <input type="text" id="maintenance-status" name="status" placeholder="Planned / Completed" required>
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit">Save Maintenance</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="module-card">
+        <h2>Maintenance Log</h2>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Vehicle</th>
+                    <th>Description</th>
+                    <th>Scheduled</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="maintenance-table"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const API_BASE = 'http://localhost:8081/api';
+    const notification = document.getElementById('notification');
+
+    const showToast = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => notification.classList.remove('show'), 3200);
+    };
+
+    const fetchJson = async (url, options = {}) => {
+        const response = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Request failed');
+        }
+        if (response.status === 204) return null;
+        return response.json();
+    };
+
+    const maintenanceForm = document.getElementById('maintenance-form');
+    maintenanceForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(maintenanceForm);
+        const payload = {
+            vehicleId: Number(data.get('vehicleId')),
+            description: data.get('description'),
+            scheduledDate: data.get('scheduledDate'),
+            status: data.get('status')
+        };
+        try {
+            await fetchJson(`${API_BASE}/maintenance`, { method: 'POST', body: JSON.stringify(payload) });
+            showToast('Maintenance saved');
+            maintenanceForm.reset();
+            await loadMaintenance();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    const loadMaintenance = async () => {
+        try {
+            const records = await fetchJson(`${API_BASE}/maintenance`);
+            document.getElementById('maintenance-count').textContent = records.length;
+            const tbody = document.getElementById('maintenance-table');
+            tbody.innerHTML = records.map(record => `
+                <tr>
+                    <td>${record.maintenanceId}</td>
+                    <td>${record.vehicle?.vehicleId}</td>
+                    <td>${record.description}</td>
+                    <td>${record.scheduledDate}</td>
+                    <td><span class="badge">${record.status}</span></td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    document.getElementById('refresh-maintenance').addEventListener('click', loadMaintenance);
+
+    loadMaintenance();
+</script>
+</body>
+</html>
+

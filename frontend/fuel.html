@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Management | TFMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <a class="back-link" href="index.html">Back to dashboard</a>
+    <h1>Fuel Management</h1>
+    <p>Log refueling operations, monitor consumption, and control fleet fuel costs in real time.</p>
+</header>
+
+<main>
+    <section class="status-grid">
+        <article class="status-card">
+            <h3>Total Liters</h3>
+            <span id="fuel-total">0 L</span>
+            <small class="module-description">Tracked for active period</small>
+        </article>
+        <article class="status-card">
+            <h3>Total Cost</h3>
+            <span id="fuel-cost-total">₹0</span>
+            <small class="module-description">All recorded refuels</small>
+        </article>
+    </section>
+
+    <section class="module-card">
+        <div class="module-header">
+            <div>
+                <h2>Capture Fuel Record</h2>
+                <p class="module-description">Keep every refuel documented for auditing and analytics.</p>
+            </div>
+            <button type="button" id="refresh-fuel">Refresh</button>
+        </div>
+
+        <form id="fuel-form">
+            <div>
+                <label for="fuel-vehicle-id">Vehicle ID</label>
+                <input type="number" id="fuel-vehicle-id" name="vehicleId" required>
+            </div>
+            <div>
+                <label for="fuel-date">Date</label>
+                <input type="date" id="fuel-date" name="date" required>
+            </div>
+            <div>
+                <label for="fuel-quantity">Fuel Quantity (L)</label>
+                <input type="number" step="0.1" id="fuel-quantity" name="fuelQuantity" required>
+            </div>
+            <div>
+                <label for="fuel-cost">Cost</label>
+                <input type="number" step="0.01" id="fuel-cost" name="cost" required>
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit">Add Record</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="module-card">
+        <h2>Fuel Ledger</h2>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Vehicle</th>
+                    <th>Date</th>
+                    <th>Quantity (L)</th>
+                    <th>Cost</th>
+                </tr>
+                </thead>
+                <tbody id="fuel-table"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const API_BASE = 'http://localhost:8081/api';
+    const notification = document.getElementById('notification');
+
+    const showToast = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => notification.classList.remove('show'), 3200);
+    };
+
+    const fetchJson = async (url, options = {}) => {
+        const response = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Request failed');
+        }
+        if (response.status === 204) return null;
+        return response.json();
+    };
+
+    const fuelForm = document.getElementById('fuel-form');
+    fuelForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(fuelForm);
+        const payload = {
+            vehicleId: Number(data.get('vehicleId')),
+            date: data.get('date'),
+            fuelQuantity: Number(data.get('fuelQuantity')),
+            cost: Number(data.get('cost'))
+        };
+        try {
+            await fetchJson(`${API_BASE}/fuel`, { method: 'POST', body: JSON.stringify(payload) });
+            showToast('Fuel record added');
+            fuelForm.reset();
+            await Promise.all([loadFuelRecords(), loadFuelUsage()]);
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    const loadFuelRecords = async () => {
+        try {
+            const records = await fetchJson(`${API_BASE}/fuel`);
+            const tbody = document.getElementById('fuel-table');
+            tbody.innerHTML = records.map(record => `
+                <tr>
+                    <td>${record.fuelId}</td>
+                    <td>${record.vehicle?.vehicleId}</td>
+                    <td>${record.date}</td>
+                    <td>${record.fuelQuantity}</td>
+                    <td>₹${record.cost}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    const loadFuelUsage = async () => {
+        try {
+            const summary = await fetchJson(`${API_BASE}/fuel/usage`);
+            document.getElementById('fuel-total').textContent = `${summary.totalFuelQuantity} L`;
+            document.getElementById('fuel-cost-total').textContent = `₹${summary.totalCost}`;
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    document.getElementById('refresh-fuel').addEventListener('click', async () => {
+        await Promise.all([loadFuelRecords(), loadFuelUsage()]);
+    });
+
+    Promise.all([loadFuelRecords(), loadFuelUsage()]);
+</script>
+</body>
+</html>
+

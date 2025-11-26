@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Analysis | TFMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <a class="back-link" href="index.html">Back to dashboard</a>
+    <h1>Performance Analysis</h1>
+    <p>Capture utilization, efficiency, and compliance insights to drive better fleet decisions.</p>
+</header>
+
+<main>
+    <section class="module-card">
+        <div class="module-header">
+            <div>
+                <h2>Generate Report</h2>
+                <p class="module-description">Document KPI snapshots or share findings from analytics.</p>
+            </div>
+            <button type="button" id="refresh-performance">Refresh</button>
+        </div>
+
+        <form id="performance-form">
+            <div>
+                <label for="report-type">Report Type</label>
+                <input type="text" id="report-type" name="reportType" placeholder="Utilization / Efficiency" required>
+            </div>
+            <div>
+                <label for="report-data">Data / Findings</label>
+                <textarea id="report-data" name="data" placeholder="Summarize insights" required></textarea>
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <button type="submit">Generate Report</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="module-card">
+        <h2>Reports Archive</h2>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Generated On</th>
+                    <th>Data</th>
+                </tr>
+                </thead>
+                <tbody id="performance-table"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const API_BASE = 'http://localhost:8081/api';
+    const notification = document.getElementById('notification');
+
+    const showToast = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => notification.classList.remove('show'), 3200);
+    };
+
+    const fetchJson = async (url, options = {}) => {
+        const response = await fetch(url, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Request failed');
+        }
+        if (response.status === 204) return null;
+        return response.json();
+    };
+
+    const performanceForm = document.getElementById('performance-form');
+    performanceForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(performanceForm);
+        const payload = {
+            reportType: data.get('reportType'),
+            data: data.get('data')
+        };
+        try {
+            await fetchJson(`${API_BASE}/performance`, { method: 'POST', body: JSON.stringify(payload) });
+            showToast('Performance report generated');
+            performanceForm.reset();
+            await loadPerformance();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    const loadPerformance = async () => {
+        try {
+            const reports = await fetchJson(`${API_BASE}/performance`);
+            const tbody = document.getElementById('performance-table');
+            tbody.innerHTML = reports.map(report => `
+                <tr>
+                    <td>${report.performanceId}</td>
+                    <td>${report.reportType}</td>
+                    <td>${report.generatedOn?.replace('T', ' ')}</td>
+                    <td>${report.data}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    document.getElementById('refresh-performance').addEventListener('click', loadPerformance);
+
+    loadPerformance();
+</script>
+</body>
+</html>
+
