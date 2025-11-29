@@ -1,6 +1,5 @@
 package com.tfms.backend.service;
 
-import com.tfms.backend.exception.ResourceNotFoundException;
 import com.tfms.backend.model.Vehicle;
 import com.tfms.backend.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
@@ -49,7 +48,7 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public Vehicle getVehicle(Long id) {
         return vehicleRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found: " + id));
+            .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + id));
     }
 }
 

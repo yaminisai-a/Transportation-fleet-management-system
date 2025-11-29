@@ -1,7 +1,5 @@
 package com.tfms.backend.service;
 
-import com.tfms.backend.dto.TripRequest;
-import com.tfms.backend.exception.ResourceNotFoundException;
 import com.tfms.backend.model.Trip;
 import com.tfms.backend.model.Vehicle;
 import com.tfms.backend.repository.TripRepository;
@@ -22,33 +20,45 @@ public class TripService {
         this.vehicleService = vehicleService;
     }
 
-    public Trip createTrip(TripRequest request) {
-        Trip trip = mapToTrip(request, new Trip());
+    public Trip createTrip(Trip trip) {
+        Long vehicleId = trip.getVehicle() != null ? trip.getVehicle().getVehicleId() : null;
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("Vehicle id is required");
+        }
+        Vehicle vehicle = vehicleService.getVehicle(vehicleId);
+        trip.setVehicle(vehicle);
         return tripRepository.save(trip);
     }
 
-    public Trip updateTrip(Long tripId, TripRequest request) {
+    public Trip updateTrip(Long tripId, Trip updatedTrip) {
+        Long vehicleId = updatedTrip.getVehicle() != null ? updatedTrip.getVehicle().getVehicleId() : null;
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("Vehicle id is required");
+        }
+        Vehicle vehicle = vehicleService.getVehicle(vehicleId);
+
         Trip existing = tripRepository.findById(tripId)
-            .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
-        Trip updated = mapToTrip(request, existing);
-        updated.setTripId(existing.getTripId());
-        return tripRepository.save(updated);
+            .orElseThrow(() -> new IllegalArgumentException("Trip not found: " + tripId));
+
+        existing.setVehicle(vehicle);
+        existing.setDriverId(updatedTrip.getDriverId());
+        existing.setStartLocation(updatedTrip.getStartLocation());
+        existing.setEndLocation(updatedTrip.getEndLocation());
+        existing.setStartTime(updatedTrip.getStartTime());
+        existing.setEndTime(updatedTrip.getEndTime());
+
+        return tripRepository.save(existing);
+    }
+
+    public void deleteTrip(Long tripId) {
+        Trip existing = tripRepository.findById(tripId)
+            .orElseThrow(() -> new IllegalArgumentException("Trip not found: " + tripId));
+        tripRepository.delete(existing);
     }
 
     @Transactional(readOnly = true)
     public List<Trip> getTrips() {
         return tripRepository.findAll();
-    }
-
-    private Trip mapToTrip(TripRequest request, Trip trip) {
-        Vehicle vehicle = vehicleService.getVehicle(request.getVehicleId());
-        trip.setVehicle(vehicle);
-        trip.setDriverId(request.getDriverId());
-        trip.setStartLocation(request.getStartLocation());
-        trip.setEndLocation(request.getEndLocation());
-        trip.setStartTime(request.getStartTime());
-        trip.setEndTime(request.getEndTime());
-        return trip;
     }
 }
 

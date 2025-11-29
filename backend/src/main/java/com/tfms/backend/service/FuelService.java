@@ -1,8 +1,7 @@
 package com.tfms.backend.service;
 
-import com.tfms.backend.dto.FuelRecordRequest;
-import com.tfms.backend.dto.FuelUsageSummary;
 import com.tfms.backend.model.FuelRecord;
+import com.tfms.backend.model.FuelUsageSummary;
 import com.tfms.backend.model.Vehicle;
 import com.tfms.backend.repository.FuelRecordRepository;
 import org.springframework.stereotype.Service;
@@ -23,14 +22,38 @@ public class FuelService {
         this.vehicleService = vehicleService;
     }
 
-    public FuelRecord addFuelRecord(FuelRecordRequest request) {
-        Vehicle vehicle = vehicleService.getVehicle(request.getVehicleId());
-        FuelRecord record = new FuelRecord();
-        record.setVehicle(vehicle);
-        record.setDate(request.getDate());
-        record.setFuelQuantity(request.getFuelQuantity());
-        record.setCost(request.getCost());
-        return fuelRecordRepository.save(record);
+    public FuelRecord addFuelRecord(FuelRecord fuelRecord) {
+        Long vehicleId = fuelRecord.getVehicle() != null ? fuelRecord.getVehicle().getVehicleId() : null;
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("Vehicle id is required");
+        }
+        Vehicle vehicle = vehicleService.getVehicle(vehicleId);
+        fuelRecord.setVehicle(vehicle);
+        return fuelRecordRepository.save(fuelRecord);
+    }
+
+    public FuelRecord updateFuelRecord(Long fuelId, FuelRecord updatedRecord) {
+        Long vehicleId = updatedRecord.getVehicle() != null ? updatedRecord.getVehicle().getVehicleId() : null;
+        if (vehicleId == null) {
+            throw new IllegalArgumentException("Vehicle id is required");
+        }
+        Vehicle vehicle = vehicleService.getVehicle(vehicleId);
+
+        FuelRecord existing = fuelRecordRepository.findById(fuelId)
+            .orElseThrow(() -> new IllegalArgumentException("Fuel record not found: " + fuelId));
+
+        existing.setVehicle(vehicle);
+        existing.setDate(updatedRecord.getDate());
+        existing.setFuelQuantity(updatedRecord.getFuelQuantity());
+        existing.setCost(updatedRecord.getCost());
+
+        return fuelRecordRepository.save(existing);
+    }
+
+    public void deleteFuelRecord(Long fuelId) {
+        FuelRecord existing = fuelRecordRepository.findById(fuelId)
+            .orElseThrow(() -> new IllegalArgumentException("Fuel record not found: " + fuelId));
+        fuelRecordRepository.delete(existing);
     }
 
     @Transactional(readOnly = true)

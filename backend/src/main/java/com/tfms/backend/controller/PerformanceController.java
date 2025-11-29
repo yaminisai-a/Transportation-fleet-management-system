@@ -1,6 +1,5 @@
 package com.tfms.backend.controller;
 
-import com.tfms.backend.dto.PerformanceReportRequest;
 import com.tfms.backend.model.PerformanceReport;
 import com.tfms.backend.service.PerformanceService;
 import jakarta.validation.Valid;
@@ -21,9 +20,21 @@ public class PerformanceController {
     }
 
     @PostMapping
-    public ResponseEntity<PerformanceReport> generateReport(@Valid @RequestBody PerformanceReportRequest request) {
-        PerformanceReport report = performanceService.generateReport(request);
+    public ResponseEntity<PerformanceReport> generateReport(@Valid @RequestBody PerformanceReport performanceReport) {
+        PerformanceReport report = performanceService.generateReport(performanceReport);
         return ResponseEntity.status(HttpStatus.CREATED).body(report);
+    }
+
+    @PutMapping("/{performanceId}")
+    public PerformanceReport updateReport(@PathVariable Long performanceId,
+                                          @Valid @RequestBody PerformanceReport performanceReport) {
+        return performanceService.updateReport(performanceId, performanceReport);
+    }
+
+    @DeleteMapping("/{performanceId}")
+    public ResponseEntity<Void> deleteReport(@PathVariable Long performanceId) {
+        performanceService.deleteReport(performanceId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

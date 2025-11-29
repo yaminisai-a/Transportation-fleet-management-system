@@ -1,8 +1,7 @@
 package com.tfms.backend.controller;
 
-import com.tfms.backend.dto.FuelRecordRequest;
-import com.tfms.backend.dto.FuelUsageSummary;
 import com.tfms.backend.model.FuelRecord;
+import com.tfms.backend.model.FuelUsageSummary;
 import com.tfms.backend.service.FuelService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,9 +21,20 @@ public class FuelController {
     }
 
     @PostMapping
-    public ResponseEntity<FuelRecord> addFuelRecord(@Valid @RequestBody FuelRecordRequest request) {
-        FuelRecord created = fuelService.addFuelRecord(request);
+    public ResponseEntity<FuelRecord> addFuelRecord(@Valid @RequestBody FuelRecord fuelRecord) {
+        FuelRecord created = fuelService.addFuelRecord(fuelRecord);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{fuelId}")
+    public FuelRecord updateFuelRecord(@PathVariable Long fuelId, @Valid @RequestBody FuelRecord fuelRecord) {
+        return fuelService.updateFuelRecord(fuelId, fuelRecord);
+    }
+
+    @DeleteMapping("/{fuelId}")
+    public ResponseEntity<Void> deleteFuelRecord(@PathVariable Long fuelId) {
+        fuelService.deleteFuelRecord(fuelId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

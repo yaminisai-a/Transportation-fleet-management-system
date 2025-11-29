@@ -1,6 +1,5 @@
 package com.tfms.backend.controller;
 
-import com.tfms.backend.dto.TripRequest;
 import com.tfms.backend.model.Trip;
 import com.tfms.backend.service.TripService;
 import jakarta.validation.Valid;
@@ -21,14 +20,20 @@ public class TripController {
     }
 
     @PostMapping
-    public ResponseEntity<Trip> addTrip(@Valid @RequestBody TripRequest request) {
-        Trip created = tripService.createTrip(request);
+    public ResponseEntity<Trip> addTrip(@Valid @RequestBody Trip trip) {
+        Trip created = tripService.createTrip(trip);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{tripId}")
-    public Trip updateTrip(@PathVariable Long tripId, @Valid @RequestBody TripRequest request) {
-        return tripService.updateTrip(tripId, request);
+    public Trip updateTrip(@PathVariable Long tripId, @Valid @RequestBody Trip trip) {
+        return tripService.updateTrip(tripId, trip);
+    }
+
+    @DeleteMapping("/{tripId}")
+    public ResponseEntity<Void> deleteTrip(@PathVariable Long tripId) {
+        tripService.deleteTrip(tripId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

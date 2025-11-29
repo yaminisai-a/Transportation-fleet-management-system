@@ -1,6 +1,5 @@
 package com.tfms.backend.controller;
 
-import com.tfms.backend.dto.MaintenanceRequest;
 import com.tfms.backend.model.MaintenanceRecord;
 import com.tfms.backend.service.MaintenanceService;
 import jakarta.validation.Valid;
@@ -21,9 +20,21 @@ public class MaintenanceController {
     }
 
     @PostMapping
-    public ResponseEntity<MaintenanceRecord> scheduleMaintenance(@Valid @RequestBody MaintenanceRequest request) {
-        MaintenanceRecord record = maintenanceService.scheduleMaintenance(request);
+    public ResponseEntity<MaintenanceRecord> scheduleMaintenance(@Valid @RequestBody MaintenanceRecord maintenanceRecord) {
+        MaintenanceRecord record = maintenanceService.scheduleMaintenance(maintenanceRecord);
         return ResponseEntity.status(HttpStatus.CREATED).body(record);
+    }
+
+    @PutMapping("/{maintenanceId}")
+    public MaintenanceRecord updateMaintenance(@PathVariable Long maintenanceId,
+                                               @Valid @RequestBody MaintenanceRecord maintenanceRecord) {
+        return maintenanceService.updateMaintenance(maintenanceId, maintenanceRecord);
+    }
+
+    @DeleteMapping("/{maintenanceId}")
+    public ResponseEntity<Void> deleteMaintenance(@PathVariable Long maintenanceId) {
+        maintenanceService.deleteMaintenance(maintenanceId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

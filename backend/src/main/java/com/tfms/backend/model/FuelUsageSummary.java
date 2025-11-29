@@ -1,4 +1,4 @@
-package com.tfms.backend.dto;
+package com.tfms.backend.model;
 
 import java.math.BigDecimal;
 
@@ -20,5 +20,6 @@ public class FuelUsageSummary {
         return totalCost;
     }
 }
+
 
 
